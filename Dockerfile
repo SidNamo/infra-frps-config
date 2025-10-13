@@ -46,7 +46,7 @@ ENV FRPS_BIND_PORT=7000 \
     DOMAIN=localhost
 
 # 실행 파일 복사
-COPY --from=frps-builder /src/bin/frps /usr/local/bin/frps
+COPY --from=frps-builder /src/frp/bin/frps /usr/local/bin/frps
 COPY --from=healthz-builder /app/healthz /usr/local/bin/healthz
 
 EXPOSE 80
