@@ -9,7 +9,6 @@ ENV FRPS_BIND_PORT=7000 \
     FRPS_TOKEN=defaulttoken \
     LOG_LEVEL=info \
     KEEPALIVE_INTERVAL=60
-	PORT=80
 
 WORKDIR /app
 
