@@ -1,0 +1,12 @@
+name: frps
+ports:
+  - port: 80
+    protocol: http
+    public: true
+  - port: 7000
+    protocol: tcp
+    public: true
+health_checks:
+  - port: 80
+    protocol: http
+    path: /healthz
