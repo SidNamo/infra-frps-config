@@ -16,7 +16,7 @@ RUN go build -o healthz healthz.go
 ###############################################
 # Stage 2: Runtime - FRPS + Healthz
 ###############################################
-FROM fatedier/frps:latest
+FROM ghcr.io/fatedier/frps:latest
 
 # 작업 디렉터리
 WORKDIR /app
