@@ -1,46 +1,25 @@
-###############################################
-# Stage 1: Build frps
-###############################################
-FROM golang:1.23 AS frps-builder
-WORKDIR /src
-RUN apt-get update && apt-get install -y wget tar && \
-    wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz && \
-    ln -sf /usr/local/go/bin/go /usr/bin/go && \
-    go version
-RUN git clone https://github.com/fatedier/frp.git frp && \
-    cd frp && make frps
+FROM alpine:3.20
 
-###############################################
-# Stage 2: Build healthz
-###############################################
-FROM golang:1.23 AS healthz-builder
-WORKDIR /app
-COPY healthz.go .
-RUN go build -o healthz healthz.go
-
-###############################################
-# Stage 3: Runtime - FRPS + Healthz + Keepalive
-###############################################
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y curl gettext-base && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-ENV FRPS_DASH_USER=admin \
-    FRPS_DASH_PWD=admin123 \
-    FRPS_TOKEN=changeme-secret \
+# 환경변수 기본값
+ENV FRPS_BIND_PORT=7000 \
+    FRPS_DASH_PORT=7500 \
+    FRPS_API_PORT=7400 \
+    FRPS_DASH_USER=admin \
+    FRPS_DASH_PWD=admin \
+    FRPS_TOKEN=defaulttoken \
     LOG_LEVEL=info \
-    KEEPALIVE_INTERVAL=60 \
-    DOMAIN=localhost
+    KEEPALIVE_INTERVAL=60
+	PORT=80
 
-COPY --from=frps-builder /src/frp/bin/frps /usr/local/bin/frps
-COPY --from=healthz-builder /app/healthz /usr/local/bin/healthz
+WORKDIR /app
 
-EXPOSE 7000 7400 7500
+# frps, healthz, startup.sh 복사
+COPY frps /usr/local/bin/frps
+COPY healthz /usr/local/bin/healthz
+COPY startup.sh /app/startup.sh
 
-COPY startup.sh /usr/local/bin/startup.sh
-RUN chmod +x /usr/local/bin/startup.sh
+RUN chmod +x /usr/local/bin/frps /usr/local/bin/healthz /app/startup.sh
 
-CMD ["/usr/local/bin/startup.sh"]
+EXPOSE 7000 7400 7500 80
+
+CMD ["/app/startup.sh"]
