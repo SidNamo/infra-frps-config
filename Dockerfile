@@ -1,28 +1,34 @@
 ###############################################
-# Stage 1: Build healthz (Go uptime endpoint)
+# Stage 1: Build frps from source (no registry pull)
 ###############################################
-FROM golang:1.23 AS builder
+FROM golang:1.23 AS frps-builder
 
-# 작업 디렉터리 지정
+# 작업 디렉터리 생성
+WORKDIR /src
+
+# fatedier/frp 공식 리포지토리 클론
+RUN git clone https://github.com/fatedier/frp.git . && \
+    make frps
+
+###############################################
+# Stage 2: Build healthz
+###############################################
+FROM golang:1.23 AS healthz-builder
 WORKDIR /app
-
-# 헬스체크용 Go 파일 복사
 COPY healthz.go .
-
-# 실행 가능한 바이너리로 빌드
 RUN go build -o healthz healthz.go
 
-
 ###############################################
-# Stage 2: Runtime - FRPS + Healthz
+# Stage 3: Runtime - Run FRPS + Healthz
 ###############################################
-FROM ghcr.io/fatedier/frps:latest
+FROM debian:bookworm-slim
 
-# 작업 디렉터리
+# 필수 패키지 설치 (for curl/logs)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# -------- 기본 환경변수 설정 --------
-# Render 대시보드나 .env 파일에서 덮어쓸 수 있음
+# 환경 변수 기본값 (Render에서 override 가능)
 ENV FRPS_BIND_PORT=7000 \
     FRPS_API_PORT=7400 \
     FRPS_DASH_PORT=7500 \
@@ -31,17 +37,14 @@ ENV FRPS_BIND_PORT=7000 \
     FRPS_TOKEN=changeme-secret \
     LOG_LEVEL=info
 
-# healthz 바이너리를 빌드 스테이지에서 복사
-COPY --from=builder /app/healthz /usr/local/bin/healthz
+# 빌드된 frps, healthz 복사
+COPY --from=frps-builder /src/bin/frps /usr/local/bin/frps
+COPY --from=healthz-builder /app/healthz /usr/local/bin/healthz
 
-# Render는 기본적으로 외부 요청을 80 포트로 전달함
+# Render는 기본적으로 80 포트를 외부로 연결
 EXPOSE 80
 
-# -------- 실행 단계 --------
-# 1️⃣ 환경변수 기반으로 frps.ini를 동적으로 생성
-# 2️⃣ 설정을 출력해 로그로 확인
-# 3️⃣ frps 백그라운드 실행
-# 4️⃣ healthz 서버 실행 (Render용)
+# 실행 시 설정파일 생성 + 두 프로세스 동시 실행
 CMD ["/bin/sh", "-c", "\
 echo '[common]' > /app/frps.ini && \
 echo 'bind_port = ${FRPS_BIND_PORT}' >> /app/frps.ini && \
