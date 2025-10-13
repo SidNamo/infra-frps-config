@@ -39,4 +39,8 @@ RUN apk add --no-cache wget tar && \
 COPY --from=builder /healthz /usr/local/bin/healthz
 COPY startup.sh /app/startup.sh
 
-RUN chmod +x /usr/local/bin/healthz /app/startup.s
+RUN chmod +x /usr/local/bin/healthz /app/startup.sh
+
+EXPOSE 7000 7400 7500 80
+
+CMD ["/app/startup.sh"]
