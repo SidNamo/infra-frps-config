@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y wget tar && \
     ln -sf /usr/local/go/bin/go /usr/bin/go && \
     go version
 
-# frp 빌드
-RUN git clone https://github.com/fatedier/frp.git . && make frps
+# ✅ frp 빌드 (디렉토리 충돌 방지)
+RUN git clone https://github.com/fatedier/frp.git frp && \
+    cd frp && make frps
 
 ###############################################
 # Stage 2: Build healthz
