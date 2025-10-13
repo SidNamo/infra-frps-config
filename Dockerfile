@@ -35,14 +35,11 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # 기본 환경변수
-ENV FRPS_BIND_PORT=7000 \
-    FRPS_API_PORT=7400 \
-    FRPS_DASH_PORT=7500 \
-    FRPS_DASH_USER=admin \
+ENV FRPS_DASH_USER=admin \
     FRPS_DASH_PWD=admin123 \
     FRPS_TOKEN=changeme-secret \
     LOG_LEVEL=info \
-    KEEPALIVE_INTERVAL=300 \
+    KEEPALIVE_INTERVAL=60 \
     DOMAIN=localhost
 
 # 실행 파일 복사
@@ -53,13 +50,10 @@ EXPOSE 80
 
 CMD ["/bin/sh", "-c", "\
 echo '[common]' > /app/frps.ini && \
-echo 'bind_port = ${FRPS_BIND_PORT}' >> /app/frps.ini && \
-echo 'dashboard_port = ${FRPS_DASH_PORT}' >> /app/frps.ini && \
 echo 'dashboard_user = ${FRPS_DASH_USER}' >> /app/frps.ini && \
 echo 'dashboard_pwd = ${FRPS_DASH_PWD}' >> /app/frps.ini && \
 echo 'enable_api = true' >> /app/frps.ini && \
 echo 'api_addr = 0.0.0.0' >> /app/frps.ini && \
-echo 'api_port = ${FRPS_API_PORT}' >> /app/frps.ini && \
 echo 'token = ${FRPS_TOKEN}' >> /app/frps.ini && \
 echo 'log_file = /dev/stdout' >> /app/frps.ini && \
 echo 'log_level = ${LOG_LEVEL}' >> /app/frps.ini && \
