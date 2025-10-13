@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -30,6 +31,11 @@ func main() {
 		_ = json.NewEncoder(w).Encode(h)
 	})
 
-	fmt.Println("✅ Health check server started on :8080 at", startTime.Format(time.RFC3339))
-	http.ListenAndServe(":8080", nil)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "80" // Render에서 자동 주입, 없으면 80 기본
+	}
+
+	fmt.Println("✅ Health check server started on :" + port)
+	http.ListenAndServe(":"+port, nil)
 }
