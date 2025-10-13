@@ -10,6 +10,8 @@ import (
 
 func main() {
 	started := time.Now()
+
+	// 환경변수 있으면 사용, 없으면 기본값 사용
 	port := getEnv("PORT", "80")
 	bindPort := getEnv("FRPS_BIND_PORT", "7000")
 	apiPort := getEnv("FRPS_API_PORT", "7400")
@@ -36,7 +38,7 @@ func main() {
 		proxyLocal(w, r, target)
 	})
 
-	// Bind port proxy (일반적으로는 HTTP 불가, 내부 테스트용)
+	// Bind port proxy (일반적으로 HTTP 아님, 내부 테스트용)
 	http.HandleFunc("/bind/", func(w http.ResponseWriter, r *http.Request) {
 		target := fmt.Sprintf("http://127.0.0.1:%s%s", bindPort, r.URL.Path)
 		proxyLocal(w, r, target)
@@ -44,7 +46,11 @@ func main() {
 
 	fmt.Printf("✅ Healthz and proxy server started on :%s\n", port)
 	fmt.Printf("🛰  Proxying ports: bind=%s, api=%s, dashboard=%s\n", bindPort, apiPort, dashPort)
-	http.ListenAndServe(":"+port, nil)
+
+	// HTTP 서버 실행
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		fmt.Println("❌ 서버 실행 실패:", err)
+	}
 }
 
 // 공통 프록시 함수
@@ -72,6 +78,7 @@ func proxyLocal(w http.ResponseWriter, r *http.Request, target string) {
 	io.Copy(w, resp.Body)
 }
 
+// 환경변수 값이 없으면 기본값으로 fallback
 func getEnv(key, def string) string {
 	v := os.Getenv(key)
 	if v == "" {
