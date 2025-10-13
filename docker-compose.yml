@@ -1,0 +1,65 @@
+services:
+  frps:
+    image: fatedier/frps:latest
+    container_name: frps
+    restart: always
+    ports:
+      - "${FRPS_BIND_PORT:-7000}:7000"
+      - "${FRPS_API_PORT:-7400}:7400"
+      - "${FRPS_DASH_PORT:-7500}:7500"
+    environment:
+      - FRPS_BIND_PORT=${FRPS_BIND_PORT:-7000}
+      - FRPS_API_PORT=${FRPS_API_PORT:-7400}
+      - FRPS_DASH_PORT=${FRPS_DASH_PORT:-7500}
+      - FRPS_DASH_USER=${FRPS_DASH_USER:-admin}
+      - FRPS_DASH_PWD=${FRPS_DASH_PWD:-admin123}
+      - FRPS_TOKEN=${FRPS_TOKEN:-changeme-secret}
+      - LOG_LEVEL=info
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      cat <<EOF > /frps.ini
+      [common]
+      bind_port = ${FRPS_BIND_PORT}
+      dashboard_port = ${FRPS_DASH_PORT}
+      dashboard_user = ${FRPS_DASH_USER}
+      dashboard_pwd = ${FRPS_DASH_PWD}
+      enable_api = true
+      api_addr = 0.0.0.0
+      api_port = ${FRPS_API_PORT}
+      token = ${FRPS_TOKEN}
+      log_file = /dev/stdout
+      log_level = ${LOG_LEVEL}
+      log_max_days = 3
+      EOF
+      echo "✅ Generated /frps.ini:"
+      cat /frps.ini
+      exec /frps -c /frps.ini
+
+  healthz:
+    image: golang:1.23
+    container_name: healthz
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./healthz.go:/app/healthz.go
+    command: go run healthz.go
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${DOMAIN:-your-render-app.onrender.com}/healthz"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  keepalive:
+    image: curlimages/curl:latest
+    container_name: keepalive
+    restart: always
+    depends_on:
+      healthz:
+        condition: service_healthy
+    command: >
+      sh -c "while true; do
+        curl -s -o /dev/null https://${DOMAIN:-your-render-app.onrender.com}/healthz;
+        sleep 300;
+      done"
